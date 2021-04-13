@@ -19,52 +19,58 @@ def main():
                              " series.",
                         type=str)
     parser.add_argument("output_path",
-                        help="Path to where the new series should be created. Should include sth like /Data_%T.bp "
+                        help="Path to where the new series should be created. Should include sth like /Data_%%T.bp "
                              "at the end, to specify the backend.",
                         type=str)
-    parser.add_argument("-x", "--div_x",
+    parser.add_argument("-x", "--div-x",
                         help="The number of cells in x directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in x direction in the source.",
                         type=int,
                         default=1)
-    parser.add_argument("-y", "--div_y",
+    parser.add_argument("-y", "--div-y",
                         help="The number of cells in y directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in y direction in the source.",
                         type=int,
                         default=1)
-    parser.add_argument("-z", "--div_z",
+    parser.add_argument("-z", "--div-z",
                         help="The number of cells in z directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in z direction in the source.",
                         type=int,
                         default=1)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
+    parser.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
                        help="Meshes should have the reduction applied. Can't be used together with --exclude. "
                              "If not set all, but for ones listed with --exclude, meshes will be processed. "
                              "Note, other meshes will be still copied in their original resolution.")
-    group.add_argument('-e', '--exclude', nargs='+', type=str, default=[],
+    parser.add_argument('-e', '--exclude', nargs='+', type=str, default=[],
                        help="A list of meshes to exclude from reduction. Can't be used together with --meshes. "
                              "Note, these meshes will be still copied in their original resolution.")
     parser.add_argument("-w", "--wait", action='store_true',
                         help="When set the script will wait until the source path points to an existing file. "
                              "Use this when the source path points to an .sst file and the writer may not have yet"
                              " created it when the script is trying to open the series.")
-    parser.add_argument("-s", "--source_config_path",
+    parser.add_argument("-s", "--source-config-path",
                         help="Path to an .json file that specifies the backend specific configuration for the "
                              "source openPMD series.", default='{}',
                         type=str)
-    parser.add_argument("-o", "--output_config_path",
+    parser.add_argument("-o", "--output-config-path",
                         help="Path to an .json file that specifies the backend specific configuration for the "
                              "output openPMD series.", default='{}',
                         type=str)
     args = parser.parse_args()
 
-    with open(args.s, 'r') as json_data:
+    with open(args.source_config_path, 'r') as json_data:
         options_input_string = json.dumps(json.load(json_data))
-    with open(args.o, 'r') as json_data:
+    with open(args.output_config_path, 'r') as json_data:
         options_output_string = json.dumps(json.load(json_data))
-
-    reducer = OutputReducer(args.source_path, args.output_path, args.x, args.y, args.z, args.m, args.e, args.w,
+    if args.meshes:
+        meshes = args.meshes
+    else:
+        meshes = None
+    if args.exclude:
+        exclude = args.exclude
+    else:
+        exclude = None
+    reducer = OutputReducer(args.source_path, args.output_path, args.div_x, args.div_y, args.div_z, meshes, exclude, args.wait,
                             options_input_string, options_output_string)
     print("Successfully initialized. Input and output series are open. Running now!")
     reducer.run()
