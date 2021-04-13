@@ -1,0 +1,12 @@
+{
+  "adios2": {
+    "engine": {
+      "parameters": {
+        "ControlTransport": "sockets",
+        "DataTransport": "WAN",
+        "InitialBufferSize": "2Gb",
+        "Profile": "Off"
+      }
+    }
+  }
+}

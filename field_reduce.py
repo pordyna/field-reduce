@@ -1,0 +1,74 @@
+import argparse
+import json
+
+from OutputReducer import OutputReducer
+
+
+def main():
+    # Define command line arguments:
+    parser = argparse.ArgumentParser(
+        description="Reads an openPMD series and reduces fields(meshes) resolution by pixel binning. The output is "
+                    "written into another openPMD series. Attributes are preserved as well."
+                    "There is no support for patches/particles, they will be ignored and will not be saved."
+                    "The main use case is to read from an SST stream series and save to a file based series to reduce"
+                    "the amount of data written to disk. Though it should work with other combinations like "
+                    "file -> file or stream -> stream as well."
+)
+    parser.add_argument("source_path",
+                        help="Path to the .sst file of the input stream, or alternatively to a file based openPMD"
+                             " series.",
+                        type=str)
+    parser.add_argument("output_path",
+                        help="Path to where the new series should be created. Should include sth like /Data_%T.bp "
+                             "at the end, to specify the backend.",
+                        type=str)
+    parser.add_argument("-x", "--div_x",
+                        help="The number of cells in x directions will be reduced by this value. Has to be an integer."
+                             "Has to divide the number of cells in x direction in the source.",
+                        type=int,
+                        default=1)
+    parser.add_argument("-y", "--div_y",
+                        help="The number of cells in y directions will be reduced by this value. Has to be an integer."
+                             "Has to divide the number of cells in y direction in the source.",
+                        type=int,
+                        default=1)
+    parser.add_argument("-z", "--div_z",
+                        help="The number of cells in z directions will be reduced by this value. Has to be an integer."
+                             "Has to divide the number of cells in z direction in the source.",
+                        type=int,
+                        default=1)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
+                       help="Meshes should have the reduction applied. Can't be used together with --exclude. "
+                             "If not set all, but for ones listed with --exclude, meshes will be processed. "
+                             "Note, other meshes will be still copied in their original resolution.")
+    group.add_argument('-e', '--exclude', nargs='+', type=str, default=[],
+                       help="A list of meshes to exclude from reduction. Can't be used together with --meshes. "
+                             "Note, these meshes will be still copied in their original resolution.")
+    parser.add_argument("-w", "--wait", action='store_true',
+                        help="When set the script will wait until the source path points to an existing file. "
+                             "Use this when the source path points to an .sst file and the writer may not have yet"
+                             " created it when the script is trying to open the series.")
+    parser.add_argument("-s", "--source_config_path",
+                        help="Path to an .json file that specifies the backend specific configuration for the "
+                             "source openPMD series.", default='{}',
+                        type=str)
+    parser.add_argument("-o", "--output_config_path",
+                        help="Path to an .json file that specifies the backend specific configuration for the "
+                             "output openPMD series.", default='{}',
+                        type=str)
+    args = parser.parse_args()
+
+    with open(args.s, 'r') as json_data:
+        options_input_string = json.dumps(json.load(json_data))
+    with open(args.o, 'r') as json_data:
+        options_output_string = json.dumps(json.load(json_data))
+
+    reducer = OutputReducer(args.source_path, args.output_path, args.x, args.y, args.z, args.m, args.e, args.w,
+                            options_input_string, options_output_string)
+    print("Successfully initialized. Input and output series are open. Running now!")
+    reducer.run()
+    del reducer
+
+if __name__ == "__main__":
+    main()

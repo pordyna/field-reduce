@@ -16,18 +16,39 @@ def copy_attributes(source: io.Attributable,
 
 class OutputReducer:
 
-    def __init__(self, sst_file_path: str, output_path: str, div_x: int,
+    def __init__(self, source_path: str, output_path: str, div_x: int,
                  div_y: int, div_z: int,
-                 meshes: Optional[Iterable[str]] = None, wait: bool = False, options_in = '{}', options_out = '{}'):
+                 meshes: Optional[Iterable[str]] = None,
+                 exclude: Optional[Iterable[str]] = None,
+                 wait: bool = False, options_in='{}', options_out='{}'):
+        if meshes is not None and exclude is not None:
+            raise ValueError("meshes and exclude are exclusive optional arguments and can't be set at the same time")
         if meshes is not None:
             self.meshes_to_reduce = meshes
+        else:
+            self.meshes_to_reduce = []
+        if exclude is not None:
+            self.meshes_to_exclude = exclude
+        else:
+            self.meshes_to_exclude = []
         self.axis_scaling = {'x': div_x, 'y': div_y, 'z': div_z}
         self.output_series = io.Series(output_path, io.Access.create, options_out)
         if wait:
-            while not os.path.exists(sst_file_path):
+            while not os.path.exists(source_path):
                 time.sleep(10)
-        self.input_series = io.Series(sst_file_path, io.Access.read_only, options_in)
+        self.input_series = io.Series(source_path, io.Access.read_only, options_in)
         self.stored_meshes: dict[str, dict[str, np.ndarray]] = {}
+
+    def _to_be_reduced(self, mesh_name: str) -> bool:
+        # no options set:
+        if not self.meshes_to_reduce and not self.meshes_to_exclude:
+            return True
+        # meshes used
+        elif self.meshes_to_reduce:
+            return mesh_name in self.meshes_to_reduce
+        # exclude used
+        else:
+            return mesh_name not in self.meshes_to_exclude
 
     def _process_mrc_before_close(self, input_mrc: io.Mesh_Record_Component,
                                   output_mrc: io.Mesh_Record_Component, mesh_dict: dict, mrc_name: str) -> None:
@@ -42,35 +63,39 @@ class OutputReducer:
         for mrc_name in input_mesh:
             self._process_mrc_before_close(input_mesh[mrc_name], output_mesh[mrc_name], mesh_dict, mrc_name),
 
-    def reduce(self):
+    def run(self):
         copy_attributes(self.input_series, self.output_series)
         write_iterations = self.output_series.write_iterations()
         for input_iteration in self.input_series.read_iterations():
+            idx = input_iteration.iteration_index
+            print(f"Starting to process iteration number {idx}."
+                  f" Starting to read data from source.")
             # create iteration and copy attributes
-            output_iteration = write_iterations[input_iteration.iteration_index]
+            output_iteration = write_iterations[idx]
             copy_attributes(input_iteration, output_iteration)
-            self.output_series.flush()
+            # self.output_series.flush()
 
             # handle meshes
             input_meshes = input_iteration.meshes
             output_meshes = output_iteration.meshes
             copy_attributes(input_meshes, output_meshes)
-            self.output_series.flush()
+            # self.output_series.flush()
 
             for mesh_name in input_meshes:
                 mesh_dict = self.stored_meshes[mesh_name] = {}
                 self._process_mesh_before_close(input_meshes[mesh_name], output_meshes[mesh_name], mesh_dict)
             input_iteration.close()
-
+            print(f"Iteration number {idx} : All iteration data loaded from source. "
+                  f"Now, processing and writing data.")
             for mesh_name, mesh_dict in self.stored_meshes.items():
                 mesh = output_iteration.meshes[mesh_name]
                 new_grid_spacing = mesh.grid_spacing
-                if mesh_name in self.meshes_to_reduce or self.meshes_to_reduce is None:
+                if self._to_be_reduced(mesh_name):
                     for dd in range(len(new_grid_spacing)):
                         new_grid_spacing[dd] *= self.axis_scaling[mesh.axis_labels[dd]]
                     mesh.set_grid_spacing(new_grid_spacing)
                 for mrc_name, mrc_data_old in self.stored_meshes[mesh_name].items():
-                    if mesh_name in self.meshes_to_reduce or self.meshes_to_reduce is None:
+                    if self._to_be_reduced(mesh_name):
                         new_shape = list(mrc_data_old.shape)
                         for dd in range(len(new_shape)):
                             new_shape[dd] = new_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
@@ -83,3 +108,5 @@ class OutputReducer:
                     mrc.reset_dataset(dataset)
                     mrc.store_chunk(mrc_data)
             output_iteration.close()
+            self.stored_meshes = {}
+            print(f"Finished processing iteration number {idx}.")
