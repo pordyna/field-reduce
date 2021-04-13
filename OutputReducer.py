@@ -1,14 +1,20 @@
-import openpmd_api as io
+import openpmd_api as api
 import os.path
 import time
 import numpy as np
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Tuple
+
+try:
+    from mpi4py import MPI
+    HAVE_MPI = True
+except ImportError:
+    HAVE_MPI = False
 
 from downscale_kernel import downscale
 
 
-def copy_attributes(source: io.Attributable,
-                    target: io.Attributable) -> None:
+def copy_attributes(source: api.Attributable,
+                    target: api.Attributable) -> None:
     dtypes = source.attribute_dtypes
     for attribute in source.attributes:
         target.set_attribute(attribute, source.get_attribute(attribute), dtypes[attribute])
@@ -32,12 +38,16 @@ class OutputReducer:
         else:
             self.meshes_to_exclude = []
         self.axis_scaling = {'x': div_x, 'y': div_y, 'z': div_z}
-        self.output_series = io.Series(output_path, io.Access.create, options_out)
+        if HAVE_MPI:
+            self.comm = MPI.COMM_WORLD
+        else:
+            self.comm = api.pipe.FallbackMPICommunicator()
+        self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
         if wait:
             while not os.path.exists(source_path):
                 time.sleep(10)
-        self.input_series = io.Series(source_path, io.Access.read_only, options_in)
-        self.stored_meshes: dict[str, dict[str, np.ndarray]] = {}
+        self.input_series = api.Series(source_path, api.Access.read_only, self.comm, options_in)
+        self.stored_meshes: dict[str, dict[str, Tuple[np.ndarray, Tuple]]] = {}
 
     def _to_be_reduced(self, mesh_name: str) -> bool:
         # no options set:
@@ -50,14 +60,18 @@ class OutputReducer:
         else:
             return mesh_name not in self.meshes_to_exclude
 
-    def _process_mrc_before_close(self, input_mrc: io.Mesh_Record_Component,
-                                  output_mrc: io.Mesh_Record_Component, mesh_dict: dict, mrc_name: str) -> None:
+    def _process_mrc_before_close(self, input_mrc: api.Mesh_Record_Component,
+                                  output_mrc: api.Mesh_Record_Component, mesh_dict: dict, mrc_name: str) -> None:
         copy_attributes(input_mrc, output_mrc)
-        input_data = input_mrc.load_chunk()
+        shape = input_mrc.shape
+        offset = [0 for _ in shape]
+        chunk = api.pipe.Chunk(offset, shape)
+        local_chunk = chunk.slice1D(self.comm.rank, self.comm.size)
+        input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
         self.input_series.flush()
-        mesh_dict[mrc_name] = input_data
+        mesh_dict[mrc_name] = (input_data, shape)
 
-    def _process_mesh_before_close(self, input_mesh: io.Mesh, output_mesh: io.Mesh, mesh_dict: dict) -> None:
+    def _process_mesh_before_close(self, input_mesh: api.Mesh, output_mesh: api.Mesh, mesh_dict: dict) -> None:
         copy_attributes(input_mesh, output_mesh)
         # go over record components:
         for mrc_name in input_mesh:
@@ -68,7 +82,7 @@ class OutputReducer:
         write_iterations = self.output_series.write_iterations()
         for input_iteration in self.input_series.read_iterations():
             idx = input_iteration.iteration_index
-            print(f"Starting to process iteration number {idx}."
+            print(f"[rank: {self.comm.rank}]:  Starting to process iteration number {idx}."
                   f" Starting to read data from source.")
             # create iteration and copy attributes
             output_iteration = write_iterations[idx]
@@ -85,7 +99,7 @@ class OutputReducer:
                 mesh_dict = self.stored_meshes[mesh_name] = {}
                 self._process_mesh_before_close(input_meshes[mesh_name], output_meshes[mesh_name], mesh_dict)
             input_iteration.close()
-            print(f"Iteration number {idx} : All iteration data loaded from source. "
+            print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
                   f"Now, processing and writing data.")
             for mesh_name, mesh_dict in self.stored_meshes.items():
                 mesh = output_iteration.meshes[mesh_name]
@@ -94,19 +108,34 @@ class OutputReducer:
                     for dd in range(len(new_grid_spacing)):
                         new_grid_spacing[dd] *= self.axis_scaling[mesh.axis_labels[dd]]
                     mesh.set_grid_spacing(new_grid_spacing)
-                for mrc_name, mrc_data_old in self.stored_meshes[mesh_name].items():
+                for mrc_name, (mrc_data_old, old_global_shape) in self.stored_meshes[mesh_name].items():
                     if self._to_be_reduced(mesh_name):
-                        new_shape = list(mrc_data_old.shape)
-                        for dd in range(len(new_shape)):
-                            new_shape[dd] = new_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
-                        mrc_data = np.empty(shape=new_shape, dtype=mrc_data_old.dtype)
+                        new_global_shape = list(old_global_shape)
+                        for dd in range(len(new_global_shape)):
+                            new_global_shape[dd] = new_global_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
+                        offset = [0 for _ in new_global_shape]
+                        global_chunk = api.pipe.Chunk(offset, new_global_shape)
+                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
+                        local_shape = list(local_chunk.extent)
+                        for dd, extend in enumerate(local_shape):
+                            local_shape[dd] = extend - local_chunk.offset[dd]
+                            if mrc_data_old.shape[dd] % local_shape[dd] != 0:
+                                raise ValueError(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
+                                                 f"Local output shape {local_shape} is not compatible with the local "
+                                                 f"input shape {mrc_data_old.shape}. {local_shape[dd]} does not divide"
+                                                 f" {mrc_data_old.shape[dd]}!")
+
+                        mrc_data = np.empty(shape=local_shape, dtype=mrc_data_old.dtype)
                         downscale(mrc_data_old, mrc_data)
                     else:
+                        offset = [0 for _ in old_global_shape]
+                        global_chunk = api.pipe.Chunk(offset, old_global_shape)
+                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         mrc_data = mrc_data_old
                     mrc = mesh[mrc_name]
-                    dataset = io.Dataset(mrc_data.dtype, mrc_data.shape)
+                    dataset = api.Dataset(mrc_data.dtype, mrc_data.shape)
                     mrc.reset_dataset(dataset)
-                    mrc.store_chunk(mrc_data)
+                    mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
             output_iteration.close()
             self.stored_meshes = {}
-            print(f"Finished processing iteration number {idx}.")
+            print(f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}.")
