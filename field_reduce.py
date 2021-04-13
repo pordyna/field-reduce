@@ -13,7 +13,7 @@ def main():
                     "The main use case is to read from an SST stream series and save to a file based series to reduce"
                     "the amount of data written to disk. Though it should work with other combinations like "
                     "file -> file or stream -> stream as well."
-)
+    )
     parser.add_argument("source_path",
                         help="Path to the .sst file of the input stream, or alternatively to a file based openPMD"
                              " series.",
@@ -38,11 +38,11 @@ def main():
                         type=int,
                         default=1)
     parser.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
-                       help="Meshes should have the reduction applied. Can't be used together with --exclude. "
+                        help="Meshes should have the reduction applied. Can't be used together with --exclude. "
                              "If not set all, but for ones listed with --exclude, meshes will be processed. "
                              "Note, other meshes will be still copied in their original resolution.")
     parser.add_argument('-e', '--exclude', nargs='+', type=str, default=[],
-                       help="A list of meshes to exclude from reduction. Can't be used together with --meshes. "
+                        help="A list of meshes to exclude from reduction. Can't be used together with --meshes. "
                              "Note, these meshes will be still copied in their original resolution.")
     parser.add_argument("-w", "--wait", action='store_true',
                         help="When set the script will wait until the source path points to an existing file. "
@@ -70,11 +70,13 @@ def main():
         exclude = args.exclude
     else:
         exclude = None
-    reducer = OutputReducer(args.source_path, args.output_path, args.div_x, args.div_y, args.div_z, meshes, exclude, args.wait,
+    reducer = OutputReducer(args.source_path, args.output_path, args.div_x, args.div_y, args.div_z, meshes, exclude,
+                            args.wait,
                             options_input_string, options_output_string)
     print("Successfully initialized. Input and output series are open. Running now!")
     reducer.run()
     del reducer
+
 
 if __name__ == "__main__":
     main()
