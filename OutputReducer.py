@@ -7,6 +7,7 @@ from typing import Optional, Iterable, Tuple
 
 try:
     from mpi4py import MPI
+
     HAVE_MPI = True
 except ImportError:
     HAVE_MPI = False
@@ -125,16 +126,14 @@ class OutputReducer:
                         offset = [0 for _ in new_global_shape]
                         global_chunk = Chunk(offset, new_global_shape)
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
-                        local_shape = list(local_chunk.extent)
-                        for dd, extend in enumerate(local_shape):
-                            local_shape[dd] = extend - local_chunk.offset[dd]
-                            if mrc_data_old.shape[dd] % local_shape[dd] != 0:
+                        for dd, extent in enumerate(local_chunk.extent):
+                            if mrc_data_old.shape[dd] % extent != 0:
                                 raise ValueError(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
-                                                 f"Local output shape {local_shape} is not compatible with the local "
-                                                 f"input shape {mrc_data_old.shape}. {local_shape[dd]} does not divide"
-                                                 f" {mrc_data_old.shape[dd]}!")
+                                                 f"Local output shape {local_chunk.extent} is not compatible with the "
+                                                 f"local input shape {mrc_data_old.shape}. {local_chunk.extent[dd]} "
+                                                 f"does not divide {mrc_data_old.shape[dd]}!")
 
-                        mrc_data = np.empty(shape=local_shape, dtype=mrc_data_old.dtype)
+                        mrc_data = np.empty(shape=local_chunk.extent, dtype=mrc_data_old.dtype)
                         downscale(mrc_data_old, mrc_data)
                     else:
                         offset = [0 for _ in old_global_shape]
@@ -142,8 +141,11 @@ class OutputReducer:
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         mrc_data = mrc_data_old
                     mrc = mesh[mrc_name]
-                    dataset = api.Dataset(mrc_data.dtype, mrc_data.shape)
+                    dataset = api.Dataset(mrc_data.dtype, global_chunk.extent)
                     mrc.reset_dataset(dataset)
+                    print(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
+                          f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
+                          f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
             output_iteration.close()
             self.stored_meshes = {}
