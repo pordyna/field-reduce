@@ -75,8 +75,8 @@ class OutputReducer:
         copy_attributes(input_mrc, output_mrc)
         shape = input_mrc.shape
         offset = [0 for _ in shape]
-        chunk = Chunk(offset, shape, dimension=0)
-        local_chunk = chunk.slice1D(self.comm.rank, self.comm.size)
+        chunk = Chunk(offset, shape)
+        local_chunk = chunk.slice1D(self.comm.rank, self.comm.size, dimension=0)
         input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
         self.input_series.flush()
         mesh_dict[mrc_name] = (input_data, shape)
@@ -124,8 +124,8 @@ class OutputReducer:
                         for dd in range(len(new_global_shape)):
                             new_global_shape[dd] = new_global_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
                         offset = [0 for _ in new_global_shape]
-                        global_chunk = Chunk(offset, new_global_shape, dimension=0)
-                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
+                        global_chunk = Chunk(offset, new_global_shape)
+                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size, dimension=0)
                         for dd, extent in enumerate(local_chunk.extent):
                             if mrc_data_old.shape[dd] % extent != 0:
                                 raise ValueError(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
@@ -137,8 +137,8 @@ class OutputReducer:
                         downscale(mrc_data_old, mrc_data)
                     else:
                         offset = [0 for _ in old_global_shape]
-                        global_chunk = Chunk(offset, old_global_shape, dimension=0)
-                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
+                        global_chunk = Chunk(offset, old_global_shape)
+                        local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size, dimension=0)
                         mrc_data = mrc_data_old
                     mrc = mesh[mrc_name]
                     dataset = api.Dataset(mrc_data.dtype, global_chunk.extent)
