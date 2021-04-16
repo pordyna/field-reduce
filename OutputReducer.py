@@ -45,11 +45,17 @@ class OutputReducer:
         else:
             self.comm = FallbackMPICommunicator()
             print("In serial mode")
-        self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
+        if self.comm.size == 1:
+            self.output_series = api.Series(output_path, api.Access.create, options_out)
+        else:
+            self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
         if wait:
             while not os.path.exists(source_path):
                 time.sleep(10)
-        self.input_series = api.Series(source_path, api.Access.read_only, self.comm, options_in)
+        if self.comm.size == 1:
+            self.input_series = api.Series(source_path, api.Access.read_only, options_in)
+        else:
+            self.input_series = api.Series(source_path, api.Access.read_only, self.comm, options_in)
         self.stored_meshes: dict[str, dict[str, Tuple[np.ndarray, Tuple]]] = {}
 
     def _to_be_reduced(self, mesh_name: str) -> bool:
