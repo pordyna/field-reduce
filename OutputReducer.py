@@ -40,8 +40,10 @@ class OutputReducer:
         self.axis_scaling = {'x': div_x, 'y': div_y, 'z': div_z}
         if HAVE_MPI:
             self.comm = MPI.COMM_WORLD
+            print(f"You are using MPI. Welcome from rank {self.comm.rank} of {self.comm.size}")
         else:
             self.comm = api.pipe.FallbackMPICommunicator()
+            print("In serial mode")
         self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
         if wait:
             while not os.path.exists(source_path):

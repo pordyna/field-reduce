@@ -3,6 +3,13 @@ import json
 
 from OutputReducer import OutputReducer
 
+import sys
+sys.path.append('/trinity/shared/pkg/devel/python/3.6.5/lib/python3.6/site-packages')
+try:
+    from mpi4py import MPI
+    HAVE_MPI = True
+except ImportError:
+    HAVE_MPI = False
 
 def main():
     # Define command line arguments:
