@@ -1,4 +1,5 @@
 import openpmd_api as api
+from openpmd_api.pipe import FallbackMPICommunicator, Chunk
 import os.path
 import time
 import numpy as np
@@ -42,7 +43,7 @@ class OutputReducer:
             self.comm = MPI.COMM_WORLD
             print(f"You are using MPI. Welcome from rank {self.comm.rank} of {self.comm.size}")
         else:
-            self.comm = api.pipe.FallbackMPICommunicator()
+            self.comm = FallbackMPICommunicator()
             print("In serial mode")
         self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
         if wait:
@@ -67,7 +68,7 @@ class OutputReducer:
         copy_attributes(input_mrc, output_mrc)
         shape = input_mrc.shape
         offset = [0 for _ in shape]
-        chunk = api.pipe.Chunk(offset, shape)
+        chunk = Chunk(offset, shape)
         local_chunk = chunk.slice1D(self.comm.rank, self.comm.size)
         input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
         self.input_series.flush()
@@ -116,7 +117,7 @@ class OutputReducer:
                         for dd in range(len(new_global_shape)):
                             new_global_shape[dd] = new_global_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
                         offset = [0 for _ in new_global_shape]
-                        global_chunk = api.pipe.Chunk(offset, new_global_shape)
+                        global_chunk = Chunk(offset, new_global_shape)
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         local_shape = list(local_chunk.extent)
                         for dd, extend in enumerate(local_shape):
@@ -131,7 +132,7 @@ class OutputReducer:
                         downscale(mrc_data_old, mrc_data)
                     else:
                         offset = [0 for _ in old_global_shape]
-                        global_chunk = api.pipe.Chunk(offset, old_global_shape)
+                        global_chunk = Chunk(offset, old_global_shape)
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         mrc_data = mrc_data_old
                     mrc = mesh[mrc_name]
