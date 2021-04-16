@@ -75,7 +75,7 @@ class OutputReducer:
         copy_attributes(input_mrc, output_mrc)
         shape = input_mrc.shape
         offset = [0 for _ in shape]
-        chunk = Chunk(offset, shape)
+        chunk = Chunk(offset, shape, dimension=0)
         local_chunk = chunk.slice1D(self.comm.rank, self.comm.size)
         input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
         self.input_series.flush()
@@ -124,7 +124,7 @@ class OutputReducer:
                         for dd in range(len(new_global_shape)):
                             new_global_shape[dd] = new_global_shape[dd] // self.axis_scaling[mesh.axis_labels[dd]]
                         offset = [0 for _ in new_global_shape]
-                        global_chunk = Chunk(offset, new_global_shape)
+                        global_chunk = Chunk(offset, new_global_shape, dimension=0)
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         for dd, extent in enumerate(local_chunk.extent):
                             if mrc_data_old.shape[dd] % extent != 0:
@@ -137,7 +137,7 @@ class OutputReducer:
                         downscale(mrc_data_old, mrc_data)
                     else:
                         offset = [0 for _ in old_global_shape]
-                        global_chunk = Chunk(offset, old_global_shape)
+                        global_chunk = Chunk(offset, old_global_shape, dimension=0)
                         local_chunk = global_chunk.slice1D(self.comm.rank, self.comm.size)
                         mrc_data = mrc_data_old
                     mrc = mesh[mrc_name]
