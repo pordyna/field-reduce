@@ -144,9 +144,9 @@ class OutputReducer:
                     mrc = mesh[mrc_name]
                     dataset = api.Dataset(mrc_data.dtype, global_chunk.extent)
                     mrc.reset_dataset(dataset)
-                    print(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
-                          f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
-                          f" local_chunk.extent {local_chunk.extent}")
+                    # print(f"[rank: {self.comm.rank}, mesh: {mesh_name}, mrc: {mrc_name}]: "
+                    #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
+                    #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
             output_iteration.close()
             self.stored_meshes = {}
