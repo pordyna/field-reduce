@@ -112,7 +112,7 @@ class OutputReducer:
                 # input_iteration.close()
                 #print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
                 #      f"Now, processing and writing data.")
-                input_iteration.flush()
+                self.input_series.flush()
                 mesh = output_iteration.meshes[mesh_name]
                 new_grid_spacing = mesh.grid_spacing
                 if self._to_be_reduced(mesh_name):
@@ -148,7 +148,7 @@ class OutputReducer:
                     #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
-                    output_iteration.flush()
+                    self.output_series.flush()
                     self.stored_meshes = {}
             input_iteration.close()
             output_iteration.close()
