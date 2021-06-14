@@ -149,7 +149,7 @@ class OutputReducer:
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
                     self.output_series.flush()
-                    self.stored_meshes = {}
+                self.stored_meshes = {}
             input_iteration.close()
             output_iteration.close()
             print(f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}.")
