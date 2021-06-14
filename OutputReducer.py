@@ -46,13 +46,14 @@ class OutputReducer:
         else:
             self.comm = FallbackMPICommunicator()
             print("In serial mode")
+        if wait:
+            while not os.path.exists(source_path):
+                time.sleep(1)
         if self.comm.size == 1:
             self.output_series = api.Series(output_path, api.Access.create, options_out)
         else:
             self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
-        if wait:
-            while not os.path.exists(source_path):
-                time.sleep(10)
+        
         if self.comm.size == 1:
             self.input_series = api.Series(source_path, api.Access.read_only, options_in)
         else:
