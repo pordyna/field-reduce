@@ -148,7 +148,7 @@ class OutputReducer:
                     #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
-                    self.output_series.flush()
+                self.output_series.flush()
                 self.stored_meshes = {}
             input_iteration.close()
             output_iteration.close()
