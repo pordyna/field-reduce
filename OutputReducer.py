@@ -109,10 +109,10 @@ class OutputReducer:
             for mesh_name in input_meshes:
                 mesh_dict = self.stored_meshes[mesh_name] = {}
                 self._process_mesh_before_close(input_meshes[mesh_name], output_meshes[mesh_name], mesh_dict)
-            input_iteration.close()
-            print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
-                  f"Now, processing and writing data.")
-            for mesh_name, mesh_dict in self.stored_meshes.items():
+                # input_iteration.close()
+                #print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
+                #      f"Now, processing and writing data.")
+                input_iteration.flush()
                 mesh = output_iteration.meshes[mesh_name]
                 new_grid_spacing = mesh.grid_spacing
                 if self._to_be_reduced(mesh_name):
@@ -148,6 +148,8 @@ class OutputReducer:
                     #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
+                    output_iteration.flush()
+                    self.stored_meshes = {}
+            input_iteration.close()
             output_iteration.close()
-            self.stored_meshes = {}
             print(f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}.")
