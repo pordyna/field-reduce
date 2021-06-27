@@ -53,11 +53,12 @@ class OutputReducer:
             self.output_series = api.Series(output_path, api.Access.create, options_out)
         else:
             self.output_series = api.Series(output_path, api.Access.create, self.comm, options_out)
-        
+        print("opened output series")
         if self.comm.size == 1:
             self.input_series = api.Series(source_path, api.Access.read_only, options_in)
         else:
             self.input_series = api.Series(source_path, api.Access.read_only, self.comm, options_in)
+        print("opened input series")
         self.stored_meshes: dict[str, dict[str, Tuple[np.ndarray, Tuple]]] = {}
 
     def _to_be_reduced(self, mesh_name: str) -> bool:
@@ -79,7 +80,7 @@ class OutputReducer:
         chunk = Chunk(offset, shape)
         local_chunk = chunk.slice1D(self.comm.rank, self.comm.size, dimension=0)
         input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
-        self.input_series.flush()
+        #self.input_series.flush()
         mesh_dict[mrc_name] = (input_data, shape)
 
     def _process_mesh_before_close(self, input_mesh: api.Mesh, output_mesh: api.Mesh, mesh_dict: dict) -> None:
@@ -148,7 +149,7 @@ class OutputReducer:
                     #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
-                self.output_series.flush()
+                #self.output_series.flush()
                 self.stored_meshes = {}
             input_iteration.close()
             output_iteration.close()
