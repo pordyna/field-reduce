@@ -1,3 +1,4 @@
+
 import openpmd_api as api
 from openpmd_api.pipe import FallbackMPICommunicator, Chunk
 import os.path
@@ -7,7 +8,6 @@ from typing import Optional, Iterable, Tuple
 
 try:
     from mpi4py import MPI
-
     HAVE_MPI = True
 except ImportError:
     HAVE_MPI = False
@@ -28,7 +28,7 @@ class OutputReducer:
                  div_y: int, div_z: int,
                  meshes: Optional[Iterable[str]] = None,
                  exclude: Optional[Iterable[str]] = None,
-                 wait: bool = False, options_in='{}', options_out='{}'):
+                 wait: bool = False, options_in='{}', options_out='{}', last_iteration=-1):
         if meshes is not None and exclude is not None:
             raise ValueError("meshes and exclude are exclusive optional arguments and can't be set at the same time")
         if meshes is not None:
@@ -60,7 +60,11 @@ class OutputReducer:
             self.input_series = api.Series(source_path, api.Access.read_only, self.comm, options_in)
         print("opened input series")
         self.stored_meshes: dict[str, dict[str, Tuple[np.ndarray, Tuple]]] = {}
-
+        self.last_iteration = last_iteration
+    
+    def finalize(self):
+        del self.output_series
+        del self.input_series
     def _to_be_reduced(self, mesh_name: str) -> bool:
         # no options set:
         if not self.meshes_to_reduce and not self.meshes_to_exclude:
@@ -154,3 +158,5 @@ class OutputReducer:
             input_iteration.close()
             output_iteration.close()
             print(f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}.")
+            if (self.last_iteration <= idx and self.last_iteration >0):
+               break
