@@ -19,6 +19,10 @@ def copy_attributes(source: api.Attributable,
                     target: api.Attributable) -> None:
     dtypes = source.attribute_dtypes
     for attribute in source.attributes:
+        if attribute == "iterationEncoding":
+            continue
+        if attribute == "iterationFormat":
+            continue
         target.set_attribute(attribute, source.get_attribute(attribute), dtypes[attribute])
 
 
