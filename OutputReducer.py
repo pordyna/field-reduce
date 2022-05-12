@@ -1,6 +1,5 @@
-
 import openpmd_api as api
-from openpmd_api.pipe import FallbackMPICommunicator, Chunk
+from openpmd_api.pipe.__main__ import FallbackMPICommunicator, Chunk
 import os.path
 import time
 import numpy as np
@@ -8,6 +7,7 @@ from typing import Optional, Iterable, Tuple
 
 try:
     from mpi4py import MPI
+
     HAVE_MPI = True
 except ImportError:
     HAVE_MPI = False
@@ -65,10 +65,11 @@ class OutputReducer:
         print("opened input series")
         self.stored_meshes: dict[str, dict[str, Tuple[np.ndarray, Tuple]]] = {}
         self.last_iteration = last_iteration
-    
+
     def finalize(self):
         del self.output_series
         del self.input_series
+
     def _to_be_reduced(self, mesh_name: str) -> bool:
         # no options set:
         if not self.meshes_to_reduce and not self.meshes_to_exclude:
@@ -88,7 +89,7 @@ class OutputReducer:
         chunk = Chunk(offset, shape)
         local_chunk = chunk.slice1D(self.comm.rank, self.comm.size, dimension=0)
         input_data = input_mrc.load_chunk(local_chunk.offset, local_chunk.extent)
-        #self.input_series.flush()
+        # self.input_series.flush()
         mesh_dict[mrc_name] = (input_data, shape)
 
     def _process_mesh_before_close(self, input_mesh: api.Mesh, output_mesh: api.Mesh, mesh_dict: dict) -> None:
@@ -119,7 +120,7 @@ class OutputReducer:
                 mesh_dict = self.stored_meshes[mesh_name] = {}
                 self._process_mesh_before_close(input_meshes[mesh_name], output_meshes[mesh_name], mesh_dict)
                 # input_iteration.close()
-                #print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
+                # print(f"[rank: {self.comm.rank}]: Iteration number {idx} : All iteration data loaded from source. "
                 #      f"Now, processing and writing data.")
                 self.input_series.flush()
                 mesh = output_iteration.meshes[mesh_name]
@@ -157,10 +158,9 @@ class OutputReducer:
                     #       f"mrc_data.shape: {mrc_data.shape}, local_chunk.offset: {local_chunk.offset}"
                     #       f" local_chunk.extent {local_chunk.extent}")
                     mrc.store_chunk(mrc_data, local_chunk.offset, local_chunk.extent)
-                #self.output_series.flush()
                 self.stored_meshes = {}
             input_iteration.close()
             output_iteration.close()
             print(f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}.")
-            if (self.last_iteration <= idx and self.last_iteration >0):
-               break
+            if idx >= self.last_iteration > 0:
+                break
