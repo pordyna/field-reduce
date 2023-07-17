@@ -1,0 +1,19 @@
+[project]
+name = "field-reduce"
+description = "package for binning openpmd mesh data"
+version = "0.1.0"
+authors = [
+    { name = "Pawel Ordyna", email = "p.ordyna@hzdr.de" }
+]
+dependencies = [
+    "numpy>=1.20.2",
+    "numba>=0.53.1",
+    "openpmd_api>=0.14.4",
+    "pytest"
+]
+
+[project.optional-dependencies]
+mpi = ["mpi4py"]
+
+[project.scripts]
+field-reduce = "field_reduce:main"

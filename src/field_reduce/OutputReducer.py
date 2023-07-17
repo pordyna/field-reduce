@@ -1,5 +1,5 @@
 import openpmd_api as api
-from openpmd_api.pipe.__main__ import FallbackMPICommunicator, Chunk
+#from openpmd_api.pipe.__main__ import FallbackMPICommunicator, Chunk
 import os.path
 import time
 import numpy as np
@@ -12,8 +12,72 @@ try:
 except ImportError:
     HAVE_MPI = False
 
-from downscale_kernel import downscale
+from .downscale_kernel import downscale
 
+# copied from openpmd-pipe
+
+class FallbackMPICommunicator:
+    def __init__(self):
+        self.size = 1
+        self.rank = 0
+
+class Chunk:
+    """
+    A Chunk is an n-dimensional hypercube, defined by an offset and an extent.
+    Offset and extent must be of the same dimensionality (Chunk.__len__).
+    """
+    def __init__(self, offset, extent):
+        assert (len(offset) == len(extent))
+        self.offset = offset
+        self.extent = extent
+
+    def __len__(self):
+        return len(self.offset)
+
+    def slice1D(self, mpi_rank, mpi_size, dimension=None):
+        """
+        Slice this chunk into mpi_size hypercubes along one of its
+        n dimensions. The dimension is given through the 'dimension'
+        parameter. If None, the dimension with the largest extent on
+        this hypercube is automatically picked.
+        Returns the mpi_rank'th of the sliced chunks.
+        """
+        if dimension is None:
+            # pick that dimension which has the highest count of items
+            dimension = 0
+            maximum = self.extent[0]
+            for k, v in enumerate(self.extent):
+                if v > maximum:
+                    dimension = k
+        assert (dimension < len(self))
+        # no offset
+        assert (self.offset == [0 for _ in range(len(self))])
+        offset = [0 for _ in range(len(self))]
+        stride = self.extent[dimension] // mpi_size
+        rest = self.extent[dimension] % mpi_size
+
+        # local function f computes the offset of a rank
+        # for more equal balancing, we want the start index
+        # at the upper gaussian bracket of (N/n*rank)
+        # where N the size of the dataset in dimension dim
+        # and n the MPI size
+        # for avoiding integer overflow, this is the same as:
+        # (N div n)*rank + round((N%n)/n*rank)
+        def f(rank):
+            res = stride * rank
+            padDivident = rest * rank
+            pad = padDivident // mpi_size
+            if pad * mpi_size < padDivident:
+                pad += 1
+            return res + pad
+
+        offset[dimension] = f(mpi_rank)
+        extent = self.extent.copy()
+        if mpi_rank >= mpi_size - 1:
+            extent[dimension] -= offset[dimension]
+        else:
+            extent[dimension] = f(mpi_rank + 1) - offset[dimension]
+        return Chunk(offset, extent)
 
 def copy_attributes(source: api.Attributable,
                     target: api.Attributable) -> None:
