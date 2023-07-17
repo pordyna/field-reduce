@@ -7,9 +7,9 @@ def main():
     # Define command line arguments:
     parser = argparse.ArgumentParser(
         description="Reads an openPMD series and reduces fields(meshes) resolution by pixel binning. The output is "
-                    "written into another openPMD series. Attributes are preserved as well."
-                    "There is no support for patches/particles, they will be ignored and will not be saved."
-                    "The main use case is to read from an SST stream series and save to a file based series to reduce"
+                    "written into another openPMD series. Attributes are preserved as well. "
+                    "There is no support for patches/particles, they will be ignored and will not be saved. "
+                    "The main use case is to read from an SST stream series and save to a file based series to reduce "
                     "the amount of data written to disk. Though it should work with other combinations like "
                     "file -> file or stream -> stream as well."
     )
@@ -24,19 +24,19 @@ def main():
     parser.add_argument("-x", "--div-x",
                         help="The number of cells in x directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in x direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the longest side)",
+                             "this has to be true for each chunk, global extend is sliced along the first axis)",
                         type=int,
                         default=1)
     parser.add_argument("-y", "--div-y",
                         help="The number of cells in y directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in y direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the longest side)",
+                             "this has to be true for each chunk, global extend is sliced along the first axis)",
                         type=int,
                         default=1)
     parser.add_argument("-z", "--div-z",
                         help="The number of cells in z directions will be reduced by this value. Has to be an integer."
                              "Has to divide the number of cells in z direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the longest side)",
+                             "this has to be true for each chunk, global extend is sliced along the first axis)",
                         type=int,
                         default=1)
     parser.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
