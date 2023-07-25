@@ -23,20 +23,17 @@ def main():
                         type=str)
     parser.add_argument("-x", "--div-x",
                         help="The number of cells in x directions will be reduced by this value. Has to be an integer."
-                             "Has to divide the number of cells in x direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the first axis)",
+                             "Has to divide the number of cells in x direction in the source.",
                         type=int,
                         default=1)
     parser.add_argument("-y", "--div-y",
                         help="The number of cells in y directions will be reduced by this value. Has to be an integer."
-                             "Has to divide the number of cells in y direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the first axis)",
+                             "Has to divide the number of cells in y direction in the source.",
                         type=int,
                         default=1)
     parser.add_argument("-z", "--div-z",
                         help="The number of cells in z directions will be reduced by this value. Has to be an integer."
-                             "Has to divide the number of cells in z direction in the source. (when calling with mpi "
-                             "this has to be true for each chunk, global extend is sliced along the first axis)",
+                             "Has to divide the number of cells in z direction in the source.",
                         type=int,
                         default=1)
     parser.add_argument('-m', '--meshes', nargs='+', type=str, default=[],
