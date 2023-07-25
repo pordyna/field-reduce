@@ -36,4 +36,4 @@ optional arguments:
 
 **Note:** The particle data are ignored and won't be copied to the new output.
 
-**Tipp:** When dealing with  a non streaming input series with many iterations it may ne usefull to disable initial iteration parsing. See `example_configs/in.json`.
+**Tipp:** When dealing with  a non streaming input series with many iterations it may be usefull to disable initial iteration parsing. See `example_configs/in.json`.
