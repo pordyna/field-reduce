@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from . import OutputReducer
+from .OutputReducer import OutputReducer
 
 def main():
     # Define command line arguments:
@@ -60,6 +60,8 @@ def main():
                         type=str)
     parser.add_argument("--last_iteration", help="Last iteration to process, so that the reader won't wair for new files after this iteration (usefull for ADIOS2 with steps)",
                         default=-1, type=int)  
+    parser.add_argument("--first_iteration", help="First iteration to process.",
+                        default=-1, type=int)  
     args = parser.parse_args()
 
     with open(args.source_config_path, 'r') as json_data:
@@ -76,7 +78,7 @@ def main():
         exclude = None
     reducer = OutputReducer(args.source_path, args.output_path, args.div_x, args.div_y, args.div_z, meshes, exclude,
                             args.wait,
-                            options_input_string, options_output_string, args.last_iteration)
+                            options_input_string, options_output_string, args.last_iteration, args.first_iteration)
     print("Successfully initialized. Input and output series are open. Running now!")
     reducer.run()
     reducer.finalize()
