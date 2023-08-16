@@ -34,11 +34,13 @@ def _reduce_2d(input_arr, output_arr):
     _reduce_2d_1(input_arr, tmp_array)
     _reduce_2d_0(tmp_array, output_arr)
 
+
 @njit(parallel=True, inline='always', cache=True)
 def _downscale_2d(input_arr, output_arr):
     _reduce_2d(input_arr, output_arr)
     cells_in_bin = input_arr.shape[0] / output_arr.shape[0] * input_arr.shape[1] / output_arr.shape[1]
     output_arr[:, :] = output_arr / cells_in_bin
+
 
 @njit(parallel=True, inline='always', cache=True)
 def _downscale_3d(input_arr, output_arr):

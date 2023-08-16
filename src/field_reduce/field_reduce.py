@@ -3,6 +3,7 @@ import json
 
 from .OutputReducer import OutputReducer
 
+
 def main():
     # Define command line arguments:
     parser = argparse.ArgumentParser(
@@ -55,10 +56,11 @@ def main():
                         help="Path to an .json file that specifies the backend specific configuration for the "
                              "output openPMD series.", default='{}',
                         type=str)
-    parser.add_argument("--last_iteration", help="Last iteration to process, so that the reader won't wair for new files after this iteration (usefull for ADIOS2 with steps)",
-                        default=-1, type=int)  
+    parser.add_argument("--last_iteration",
+                        help="Last iteration to process, so that the reader won't wair for new files after this iteration (usefull for ADIOS2 with steps)",
+                        default=-1, type=int)
     parser.add_argument("--first_iteration", help="First iteration to process.",
-                        default=-1, type=int)  
+                        default=-1, type=int)
     args = parser.parse_args()
 
     with open(args.source_config_path, 'r') as json_data:
@@ -79,7 +81,7 @@ def main():
     print("Successfully initialized. Input and output series are open. Running now!")
     reducer.run()
     reducer.finalize()
-    #del reducer
+    # del reducer
 
 
 if __name__ == "__main__":

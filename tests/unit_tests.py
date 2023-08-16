@@ -29,12 +29,12 @@ def test_2d():
     large = np.random.random(size=shape[0] * shape[1]).reshape(shape)
 
     reference_0 = (large[0::bin_size[0], :] + large[1::bin_size[0], :] + large[2::bin_size[0], :])
-    output_0 = np.empty((shape[0]//bin_size[0], shape[1]))
+    output_0 = np.empty((shape[0] // bin_size[0], shape[1]))
     downscale_kernel._reduce_2d_0(large, output_0)
     assert np.all(np.isclose(output_0, reference_0))
 
     reference_1 = (large[:, 0::bin_size[1]] + large[:, 1::bin_size[1]])
-    output_1 = np.empty((shape[0], shape[1]//bin_size[1]))
+    output_1 = np.empty((shape[0], shape[1] // bin_size[1]))
     downscale_kernel._reduce_2d_1(large, output_1)
     assert np.all(np.isclose(output_1, reference_1))
 
@@ -54,7 +54,6 @@ def test_3d():
                  + large[1::2, ::3, ::2] + large[1::2, 1::3, ::2] + large[1::2, 2::3, ::2]
                  + large[1::2, ::3, 1::2] + large[1::2, 1::3, 1::2] + large[1::2, 2::3, 1::2]
                  + large[::2, ::3, 1::2] + large[::2, 1::3, 1::2] + large[::2, 2::3, 1::2]) / 12
-    output = np.empty((shape[0]//bin_size[0], shape[1]//bin_size[1], shape[2]//bin_size[2]))
+    output = np.empty((shape[0] // bin_size[0], shape[1] // bin_size[1], shape[2] // bin_size[2]))
     downscale_kernel._downscale_3d(large, output)
     assert np.all(np.isclose(reference, output))
-

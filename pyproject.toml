@@ -17,3 +17,12 @@ mpi = ["mpi4py"]
 
 [project.scripts]
 field-reduce = "field_reduce:main"
+
+[tool.black]
+line-length = 100
+
+[tool.docformatter]
+recursive = true
+pre-summary-space = true
+wrap-summaries = 100
+wrap-descriptions = 100

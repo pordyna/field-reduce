@@ -1,21 +1,23 @@
 {
   "adios2": {
     "dataset": {
-      "operators": [ {
-        "type": "blosc"
-      , "parameters": {
-          "clevel": "9"
-        , "cname": "zstd"
-        , "doshuffle": "BLOSC_BITSHUFFLE"
+      "operators": [
+        {
+          "type": "blosc",
+          "parameters": {
+            "clevel": "9",
+            "cname": "zstd",
+            "doshuffle": "BLOSC_BITSHUFFLE"
+          }
         }
-      } ]
-    }
-  , "engine": {
-      "type": "file"
-    , "parameters": {
-        "BufferGrowthFactor": "1.1"
-      , "InitialBufferSize": "2.0GB"
-      , "AggregatorRatio" : "1"
+      ]
+    },
+    "engine": {
+      "type": "file",
+      "parameters": {
+        "BufferGrowthFactor": "1.1",
+        "InitialBufferSize": "2.0GB",
+        "AggregatorRatio": "1"
       }
     }
   }
