@@ -50,11 +50,11 @@ def main():
                              " created it when the script is trying to open the series.")
     parser.add_argument("-s", "--source-config-path",
                         help="Path to an .json file that specifies the backend specific configuration for the "
-                             "source openPMD series.", default='{}',
+                             "source openPMD series.", default='',
                         type=str)
     parser.add_argument("-o", "--output-config-path",
                         help="Path to an .json file that specifies the backend specific configuration for the "
-                             "output openPMD series.", default='{}',
+                             "output openPMD series.", default='',
                         type=str)
     parser.add_argument("--last_iteration",
                         help="Last iteration to process, so that the reader won't wair for new files after this iteration (usefull for ADIOS2 with steps)",
@@ -67,10 +67,16 @@ def main():
                         default=None, type=str)
     args = parser.parse_args()
 
-    with open(args.source_config_path, 'r') as json_data:
-        options_input_string = json.dumps(json.load(json_data))
-    with open(args.output_config_path, 'r') as json_data:
-        options_output_string = json.dumps(json.load(json_data))
+    if args.source_config_path:
+        with open(args.source_config_path, 'r') as json_data:
+            options_input_string = json.dumps(json.load(json_data))
+    else:
+        options_input_string ='{}'
+    if args.output_config_path:
+        with open(args.output_config_path, 'r') as json_data:
+            options_output_string = json.dumps(json.load(json_data))
+    else:
+        options_output_string = '{}'
     if args.meshes:
         meshes = args.meshes
     else:
