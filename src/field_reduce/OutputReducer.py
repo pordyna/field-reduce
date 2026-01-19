@@ -2,7 +2,6 @@ import openpmd_api as api
 import os.path
 import time
 import numpy as np
-import time
 
 from typing import Optional, Iterable, Tuple
 
@@ -121,7 +120,8 @@ class OutputReducer:
                  div_y: int, div_z: int,
                  meshes: Optional[Iterable[str]] = None,
                  exclude: Optional[Iterable[str]] = None,
-                 wait: bool = False, options_in='{}', options_out='{}', last_iteration=-1, first_iteration=-1):
+                 wait: bool = False, options_in='{}', options_out='{}', last_iteration=-1, first_iteration=-1,
+                 checkpoint_path: Optional[str] = None):
         """ Output Reducer initializer
 
         :param source_path: path to the source openPMD series
@@ -137,6 +137,8 @@ class OutputReducer:
         :param last_iteration: Last iteration to process, useful for avoiding waiting indefinitely fro a next iteration
             when using adios steps. Set to sth < 0 to disable this check
         :param first_iteration: First iteration to process.
+        :param checkpoint_path: Path to checkpoint file to track last successfully processed iteration.
+            If None, uses default: field_reduce_checkpoint_<input_filename>
         """
         if meshes is not None and exclude is not None:
             raise ValueError("meshes and exclude are exclusive optional arguments and can't be set at the same time")
@@ -149,6 +151,25 @@ class OutputReducer:
         else:
             self.meshes_to_exclude = []
         self.axis_scaling = {'x': div_x, 'y': div_y, 'z': div_z}
+        
+        # Setup checkpoint path
+        if checkpoint_path is None:
+            # Extract filename from source_path (remove any directory path and extension)
+            import pathlib
+            source_filename = pathlib.Path(source_path).stem
+            checkpoint_path = f"field_reduce_checkpoint_{source_filename}"
+        self.checkpoint_path = checkpoint_path
+        
+        # Load checkpoint if it exists and first_iteration is at default
+        if first_iteration == -1 and os.path.exists(self.checkpoint_path):
+            try:
+                with open(self.checkpoint_path, 'r') as f:
+                    last_successful_iteration = int(f.read().strip())
+                    first_iteration = last_successful_iteration + 1
+                    print(f"Loaded checkpoint: resuming from iteration {first_iteration}", flush=True)
+            except (ValueError, IOError) as e:
+                print(f"Warning: Failed to read checkpoint file {self.checkpoint_path}: {e}", flush=True)
+        
         if HAVE_MPI:
             self.comm = MPI.COMM_WORLD
             print(f"You are using MPI. Welcome from rank {self.comm.rank} of {self.comm.size}", flush=True)
@@ -290,5 +311,12 @@ class OutputReducer:
             print(
                 f"[rank: {self.comm.rank}]: Finished processing iteration number {idx}. Took {elapsed // 60} m {elapsed % 60} s",
                 flush=True)
+            # Write checkpoint after successful iteration
+            if self.comm.rank == 0:
+                try:
+                    with open(self.checkpoint_path, 'w') as f:
+                        f.write(str(idx))
+                except IOError as e:
+                    print(f"Warning: Failed to write checkpoint file {self.checkpoint_path}: {e}", flush=True)
             if idx >= self.last_iteration > 0:
                 break

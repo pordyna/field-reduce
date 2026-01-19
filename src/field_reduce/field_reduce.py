@@ -61,6 +61,10 @@ def main():
                         default=-1, type=int)
     parser.add_argument("--first_iteration", help="First iteration to process.",
                         default=-1, type=int)
+    parser.add_argument("--checkpoint",
+                        help="Path to checkpoint file for tracking last successfully processed iteration. "
+                             "If not set, defaults to field_reduce_checkpoint_<input_filename>",
+                        default=None, type=str)
     args = parser.parse_args()
 
     with open(args.source_config_path, 'r') as json_data:
@@ -77,7 +81,8 @@ def main():
         exclude = None
     reducer = OutputReducer(args.source_path, args.output_path, args.div_x, args.div_y, args.div_z, meshes, exclude,
                             args.wait,
-                            options_input_string, options_output_string, args.last_iteration, args.first_iteration)
+                            options_input_string, options_output_string, args.last_iteration, args.first_iteration,
+                            args.checkpoint)
     print("Successfully initialized. Input and output series are open. Running now!")
     reducer.run()
     reducer.finalize()
